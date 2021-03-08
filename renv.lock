@@ -4,11 +4,95 @@
     "Repositories": [
       {
         "Name": "CRAN",
-        "URL": "https://mran.microsoft.com/snapshot/2021-02-22"
+        "URL": "https://pbil.univ-lyon1.fr/CRAN"
       }
     ]
   },
+  "Python": {
+    "Version": "3.7.3",
+    "Type": "virtualenv",
+    "Name": "/disks/PROJECT/PhD_AlexandrePelletier/atac/renv/python/virtualenvs/renv-python-3.7.3"
+  },
   "Packages": {
+    "Matrix": {
+      "Package": "Matrix",
+      "Version": "1.3-2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "ff280503079ad8623d3c4b1519b24ea2"
+    },
+    "Rcpp": {
+      "Package": "Rcpp",
+      "Version": "1.0.6",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "Rcpp",
+      "RemoteRef": "Rcpp",
+      "RemoteRepos": "https://cloud.r-project.org/",
+      "RemotePkgType": "source",
+      "RemoteSha": "1.0.6",
+      "Hash": "dbb5e436998a7eba5a9d682060533338"
+    },
+    "data.table": {
+      "Package": "data.table",
+      "Version": "1.14.0",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "data.table",
+      "RemoteRef": "data.table",
+      "RemoteRepos": "https://cloud.r-project.org/",
+      "RemotePkgType": "source",
+      "RemoteSha": "1.14.0",
+      "Hash": "d1b8b1a821ee564a3515fa6c6d5c52dc"
+    },
+    "here": {
+      "Package": "here",
+      "Version": "1.0.1",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "here",
+      "RemoteRef": "here",
+      "RemoteRepos": "https://cloud.r-project.org/",
+      "RemotePkgType": "source",
+      "RemoteSha": "1.0.1",
+      "Hash": "24b224366f9c2e7534d2344d10d59211"
+    },
+    "jsonlite": {
+      "Package": "jsonlite",
+      "Version": "1.7.2",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "jsonlite",
+      "RemoteRef": "jsonlite",
+      "RemoteRepos": "https://cloud.r-project.org/",
+      "RemotePkgType": "source",
+      "RemoteSha": "1.7.2",
+      "Hash": "98138e0994d41508c7a6b84a0600cfcb"
+    },
+    "lattice": {
+      "Package": "lattice",
+      "Version": "0.20-41",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "fbd9285028b0263d76d18c95ae51a53d"
+    },
+    "rappdirs": {
+      "Package": "rappdirs",
+      "Version": "0.3.3",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "rappdirs",
+      "RemoteRef": "rappdirs",
+      "RemoteRepos": "https://cloud.r-project.org/",
+      "RemotePkgType": "source",
+      "RemoteSha": "0.3.3",
+      "Hash": "5e3c5dc0b071b21fa128676560dbe94d"
+    },
     "renv": {
       "Package": "renv",
       "Version": "0.12.5",
@@ -21,6 +105,26 @@
       "RemotePkgType": "source",
       "RemoteSha": "0.12.5",
       "Hash": "5c0cdb37f063c58cdab3c7e9fbb8bd2c"
+    },
+    "reticulate": {
+      "Package": "reticulate",
+      "Version": "1.18",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "fbd35cac6ae7554d0e4f440bca1adf3a"
+    },
+    "rprojroot": {
+      "Package": "rprojroot",
+      "Version": "2.0.2",
+      "Source": "CRAN",
+      "Repository": "CRAN",
+      "RemoteType": "standard",
+      "RemotePkgRef": "rprojroot",
+      "RemoteRef": "rprojroot",
+      "RemoteRepos": "https://cloud.r-project.org/",
+      "RemotePkgType": "source",
+      "RemoteSha": "2.0.2",
+      "Hash": "249d8cd1e74a8f6a26194a91b47f21d1"
     }
   }
 }
