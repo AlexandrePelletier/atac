@@ -1,6 +1,5 @@
 
 #merge datasets and peaks (ref = https://satijalab.org/signac/articles/merging.html)
-#install.packages("Seurat",repos = "https://cran.r-project.org/") #v4.0
 library(Signac)
 library(Seurat)
 library(GenomicRanges)
@@ -373,18 +372,11 @@ saveRDS(cbps,fp(out,"cbps_atac1-4_merged_qc.rds"))
 # labeltransfer and annotate clusters
 #need first calculate geneactivity (count of fragments in gene region)
 #need update signac first for geneactivity(cbps) works on merged object
-# Install bioconductor
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-#     install.packages("BiocManager")
-# BiocManager::install()
-# 
-# setRepositories(ind=1:2)# To automatically install Bioconductor dependencies
-# BiocManager::install(pkgs = "Signac")
+# renv::install("bioc::Signac")
 # #restart
 # packageVersion("Signac") #1.1.1 !!
 
-# install.packages("devtools")
-# devtools::install_github("timoast/signac", ref = "develop")
+# renv::install("timoast/signac@develop")
 
 library(Signac)
 library(Seurat)
@@ -625,17 +617,11 @@ CoveragePlot(
 )
   
 #find TF motif
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-#     install.packages("BiocManager")
-# 
-# BiocManager::install("JASPAR2020")
+# renv::install("bioc::JASPAR2020")
 library(JASPAR2020)
 library(TFBSTools)
 
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-#     install.packages("BiocManager")
-# 
-# BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
+# renv::install("bioc::BSgenome.Hsapiens.UCSC.hg38")
 library(BSgenome.Hsapiens.UCSC.hg38)
 # Get a list of motif position frequency matrices from the JASPAR database
 ?getMatrixSet

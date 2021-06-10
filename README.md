@@ -6,8 +6,8 @@ Analyst: Alexandre Pelletier
 
 ``` r
 renv::use_python()
-install.packages("reticulate")
-install.packages("here")
+renv::install("reticulate")
+renv::install("here")
 
 system(paste(here::here("renv/python/virtualenvs/renv-python-3.7.3/bin/python"), "-m ensurepip"))
 reticulate::py_install("scipy") #to install python libraries
@@ -30,7 +30,7 @@ use_python <- function(type = "virtualenv", path = here::here()) {
 
 renv::snapshot() #to write on renv.lock the snapshot of the libraries installed 
 
-install.packages("Seurat") #install CRAN packages
+renv::install("Seurat") #install CRAN packages
 
 
 ```

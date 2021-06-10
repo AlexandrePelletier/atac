@@ -4,10 +4,7 @@ source("../methyl/scripts/utils/new_utils.R")
 library(Signac)
 library(Seurat)
 library(GenomeInfoDb)
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-#     install.packages("BiocManager")
-# 
-# BiocManager::install("EnsDb.Hsapiens.v86")
+# renv::install("bioc::EnsDb.Hsapiens.v86")
 library(EnsDb.Hsapiens.v86)
 set.seed(1234)
 
@@ -206,10 +203,7 @@ source("../methyl/scripts/utils/new_utils.R")
 library(Signac)
 library(Seurat)
 library(GenomeInfoDb)
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-#     install.packages("BiocManager")
-# 
-# BiocManager::install("EnsDb.Hsapiens.v86")
+# renv::install("bioc::EnsDb.Hsapiens.v86")
 library(EnsDb.Hsapiens.v86)
 set.seed(1234)
 
