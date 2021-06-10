@@ -2,7 +2,6 @@
 
 Analyst: Alexandre Pelletier
 
-
 ## Setup
 
 ``` r
@@ -11,7 +10,7 @@ install.packages("reticulate")
 install.packages("here")
 
 system(paste(here::here("renv/python/virtualenvs/renv-python-3.7.3/bin/python"), "-m ensurepip"))
-reticulate::py_install("scipy")
+reticulate::py_install("scipy") #to install python libraries
 
 
 use_python <- function(type = "virtualenv", path = here::here()) {
@@ -27,11 +26,17 @@ use_python <- function(type = "virtualenv", path = here::here()) {
   )
   renv::use_python(type = type)
   system(paste(here::here("renv/python/virtualenvs/renv-python-3.7.3/bin/python"), "-m ensurepip"))
-}
+} #to use python in this environment
 
-renv::snapshot()
+renv::snapshot() #to write on renv.lock the snapshot of the libraries installed 
+
+install.packages("Seurat") #install CRAN packages
+
 
 ```
+
+
+
 
 <!--
 ## Design
