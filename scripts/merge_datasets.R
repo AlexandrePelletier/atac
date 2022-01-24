@@ -4,7 +4,7 @@ library(Signac)
 library(Seurat)
 library(GenomicRanges)
 library(future)
-out<-"analyses/cbps_merged"
+out<-"outputs/cbps_merged"
 source("../methyl/scripts/utils/new_utils.R")
 dir.create(out)
 plan("multiprocess", workers = 4)
@@ -179,7 +179,7 @@ library(Seurat)
 library(GenomeInfoDb)
 library(EnsDb.Hsapiens.v86)
 
-cbps<-readRDS("analyses/cbps_merged/cbps_atac1-4_merged.rds")
+cbps<-readRDS("outputs/cbps_merged/cbps_atac1-4_merged.rds")
 cbps
 # 126925 features across 232072 samples within 1 assay 
 # Active assay: ATAC (126925 features, 126920 variable features)
@@ -386,7 +386,7 @@ source("../methyl/scripts/utils/new_utils.R")
 options(future.globals.maxSize = 50000 * 1024^2) # for 50 Gb RAM
 plan("multiprocess", workers = 4)
 
-out<-"analyses/cbps_merged"
+out<-"outputs/cbps_merged"
 cbps<-readRDS(fp(out,"cbps_atac1-4_merged_qc.rds"))
 DefaultAssay(cbps) <- 'ATAC'
 gene.activities <- GeneActivity(cbps)
@@ -406,11 +406,11 @@ cbps <- NormalizeData(
 )
 DefaultAssay(cbps) <- 'RNA'
 FeaturePlot(cbps,"GATA1",reduction = 'humap')
-ggsave("analyses/cbps_merged/check_RNA_ok.png")
+ggsave("outputs/cbps_merged/check_RNA_ok.png")
 saveRDS(cbps,fp(out,"cbps_atac1-4_merged_qc_rna.rds"))
 
 # Load cbps scRNA-seq data 
-cbps_rna <- readRDS("../singlecell/analyses/02-hematopo_datasets_integration/cbp0-4/all_cbps.rds")
+cbps_rna <- readRDS("../singlecell/outputs/02-hematopo_datasets_integration/cbp0-4/all_cbps.rds")
 message("find transfer Anchors..")
 DefaultAssay(cbps_rna)<-"RNA"
 features<-SelectIntegrationFeatures(list(cbps_rna,cbps),nfeatures = 3000)
@@ -466,7 +466,7 @@ p_all<-p1 |p2
 ggsave(fp(out,"label_transfer_RNA_to_ATAC.png"),plot = p_all)
 
 
-saveRDS(cbps,"analyses/cbps_merged/cbps_atac1-4_merged_qc_rna.rds")
+saveRDS(cbps,"outputs/cbps_merged/cbps_atac1-4_merged_qc_rna.rds")
 
 #and annotate : 
 library(Signac)
@@ -476,7 +476,7 @@ library(future)
 source("../methyl/scripts/utils/new_utils.R")
 options(future.globals.maxSize = 50000 * 1024^2) # for 50 Gb RAM
 
-out<-"analyses/cbps_merged"
+out<-"outputs/cbps_merged"
 
 cbps<-readRDS(fp(out,"cbps_atac1-4_merged_qc_rna.rds"))
 
@@ -548,11 +548,11 @@ library(future)
 source("../methyl/scripts/utils/new_utils.R")
 options(future.globals.maxSize = 50000 * 1024^2) # for 50 Gb RAM
 
-out<-"analyses/cbps_merged"
+out<-"outputs/cbps_merged"
 
 cbps<-readRDS(fp(out,"cbps_atac1-4_merged_qc_rna.rds"))
 
-cbps_rna <- readRDS("../singlecell/analyses/02-hematopo_datasets_integration/cbp0-4/all_cbps.rds")
+cbps_rna <- readRDS("../singlecell/outputs/02-hematopo_datasets_integration/cbp0-4/all_cbps.rds")
 
 p1<-DimPlot(cbps_rna,group.by = "new.lineage2",label = T)+ggtitle("scRNA-seq")
 p2<-DimPlot(cbps,group.by = "predicted.lineage",reduction = 'humap')+ggtitle("scATAC-seq")
@@ -646,6 +646,42 @@ enriched.motifs <- FindMotifs(
 )
 
 enriched.motifs<-data.table(enriched.motifs)
+fread("outputs/cbps_merged/enriched_motifs_hsc_peaks.csv")
+enriched.motifs[,motif.name:=factor(motif.name,levels=enriched.motifs[order(pvalue)]$motif.name)]
+
+ggplot(enriched.motifs[pvalue<10^-10][order(pvalue)])+
+  geom_col(aes(x=motif.name,y=fold.enrichment,fill=pvalue))
+
+MotifPlot(
+  object = cbps,
+  motifs = head(rownames(enriched.motifs))
+)
+
+saveRDS(cbps,"outputs/cbps_merged/cbps_atac1-4_merged_qc_rna.rds")
+
+
+cbps<-readRDS("outputs/cbps_merged/cbps_atac1-4_merged_qc_rna.rds")
+
+
+#run find_lineage_specific_peaks.R
+
+lin_peaks<-fread("outputs/cbps_merged/lineage_specific_peaks.csv.gz")
+
+#motifs HSC
+top_hsc <- lin_peaks[p_val_adj<0.05&cluster=="HSC"]$gene
+length(top_hsc) #95
+DefaultAssay(cbps)<-"ATAC"
+cbps <- AddMotifs(
+  object = cbps,
+  genome = BSgenome.Hsapiens.UCSC.hg38,
+  pfm = pfm
+)
+
+enriched.motifs <- FindMotifs(
+  object = cbps,
+  features = top_hsc )
+
+enriched.motifs<-data.table(enriched.motifs)
 enriched.motifs[,motif.name:=factor(motif.name,levels=enriched.motifs[order(pvalue)]$motif.name)]
 ggplot(enriched.motifs[pvalue<10^-10][order(pvalue)])+
   geom_col(aes(x=motif.name,y=fold.enrichment,fill=pvalue))
@@ -655,14 +691,10 @@ MotifPlot(
   motifs = head(rownames(enriched.motifs))
 )
 
-saveRDS(cbps,"analyses/cbps_merged/cbps_atac1-4_merged_qc_rna.rds")
 
-#run find_lineage_specific_peaks.R
-
-lin_peaks<-fread("analyses/cbps_merged/lineage_specific_peaks.csv.gz")
 
 lin_peaks[cluster=="LT-HSC",cluster:="Lymphoid"]
-fwrite(lin_peaks,"analyses/cbps_merged/lineage_specific_peaks.csv.gz",sep=";")
+fwrite(lin_peaks,"outputs/cbps_merged/lineage_specific_peaks.csv.gz",sep=";")
 
 unique(lin_peaks$cluster)
 lin_peaks
@@ -677,7 +709,7 @@ ggplot(lin_peaks[p_val_adj<0.05&lineage%in%c("HSC","MPP")])+
 
 #correlate with scRNA-seq
 
-cbps_rna <- readRDS("../singlecell/analyses/02-hematopo_datasets_integration/cbp0-4/all_cbps.rds")
+cbps_rna <- readRDS("../singlecell/outputs/02-hematopo_datasets_integration/cbp0-4/all_cbps.rds")
 DimPlot(cbps_rna,label=T,group.by="new.lineage2")
 DefaultAssay(cbps_rna)<-"SCT"
 FeaturePlot(cbps_rna,"PBX1",max.cutoff = 2,label=T,label.size = 3,pt.size = 0.1)
@@ -698,7 +730,7 @@ source("../singlecell/scripts/utils/seurat_utils.R")
 source("../singlecell/scripts/utils/scoreCluster.R")
 markers<-scoreMarquageCluster(markers,cbps,seuil = "intraClusterFixe",filtreMin = 2)
 markers<-annotMarkers(markers)
-fwrite(markers,"../singlecell/analyses/02-hematopo_datasets_integration/cbp0-4/markers_new.lineage3.csv",sep=";")
+fwrite(markers,"../singlecell/outputs/02-hematopo_datasets_integration/cbp0-4/markers_new.lineage3.csv",sep=";")
 
 #find closest gene from peaks
 lin_peaks<-lin_peaks[,peak:=gene][,-"gene"]
@@ -706,7 +738,7 @@ closest_genes<-ClosestFeature(object = cbps,
                               regions = unique(lin_peaks$peak))
 closest_genes<-data.table(closest_genes)
 lin_peaks<-merge(lin_peaks,closest_genes[,gene:=gene_name][,peak:=query_region][,.(peak,gene,gene_biotype,type,distance)])
-fwrite(lin_peaks,"analyses/cbps_merged/lineage_specific_peaks_and_closest_gene.csv.gz",sep=";")
+fwrite(lin_peaks,"outputs/cbps_merged/lineage_specific_peaks_and_closest_gene.csv.gz",sep=";")
 
 unique(lin_peaks$cluster)
 unique(markers$cluster)
@@ -718,7 +750,7 @@ markers[cluster%in%c("HSC","LT-HSC"),lineage:="HSC"]
 
 
 lin_peaks_markers<-merge(lin_peaks,markers,all.x=T,by=c("gene","lineage"))
-fwrite(lin_peaks_markers,"analyses/cbps_merged/lineage_specific_peaks_and_closest_gene_integr_with_scRNAseq_markers.csv.gz",sep=";")
+fwrite(lin_peaks_markers,"outputs/cbps_merged/lineage_specific_peaks_and_closest_gene_integr_with_scRNAseq_markers.csv.gz",sep=";")
 
 lin_peaks_markers[,n.peak.markers:=sum(!is.na(cluster.y)),by='lineage']
 lin_peaks_markers[,lineage:=factor(lineage,levels = unique(lin_peaks_markers[order(n.peak.markers)]$lineage))]
@@ -726,7 +758,7 @@ ggplot(lin_peaks_markers[!is.na(cluster.y)])+geom_bar(aes(x=lineage,fill=lineage
 lin_peaks_markers[,correlation:=ifelse(sign(avg_log2FC.x)==sign(avg_log2FC.y),"positive","negative")]
 lin_peaks_markers[correlation=="positive",candidate.regulation:=ifelse(avg_log2FC.x>0,"active upregulation","active downregulation")]
 lin_peaks_markers[correlation=="negative",candidate.regulation:=ifelse(avg_log2FC.x>0,"passive upregulation","passive downregulation")]
-fwrite(lin_peaks_markers,"analyses/cbps_merged/lineage_specific_peaks_and_closest_gene_integr_with_scRNAseq_markers.csv.gz",sep=";")
+fwrite(lin_peaks_markers,"outputs/cbps_merged/lineage_specific_peaks_and_closest_gene_integr_with_scRNAseq_markers.csv.gz",sep=";")
 
 
 lin_peaks_markers[,markers.matching.peak:=!is.na(cluster.y)]
