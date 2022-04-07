@@ -1,7 +1,7 @@
 MACS2==2.2.7.1
 numpy==1.20.1
 pandas==1.2.4
-pkg-resources==0.0.0
+pkg_resources==0.0.0
 python-dateutil==2.8.1
 pytz==2021.1
 scipy==1.6.3

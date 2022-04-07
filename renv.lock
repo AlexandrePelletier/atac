@@ -14,7 +14,7 @@
   "Python": {
     "Version": "3.7.3",
     "Type": "virtualenv",
-    "Name": "/disks/DATATMP/PhD_AlexandrePelletier/atac/python/virtualenvs/renv-python-3.7.3"
+    "Name": "./renv/python/virtualenvs/renv-python-3.7"
   },
   "Packages": {
     "AnnotationDbi": {
@@ -2638,10 +2638,10 @@
     },
     "renv": {
       "Package": "renv",
-      "Version": "0.15.2",
+      "Version": "0.15.4",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "206c4ef8b7ad6fb1060d69aa7b9dfe69",
+      "Hash": "c1078316e1d4f70275fc1ea60c0bc431",
       "Requirements": []
     },
     "reshape": {
