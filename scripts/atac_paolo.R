@@ -73,6 +73,8 @@ peaks_anno<-fread("~/RUN/Run_669_ATAC/Output/Bulk/bwa/mergedLibrary/macs/broadPe
 # 207423:         Oprm1         NA               NA        NA
 
 peaks_anno<-peaks_anno[,PeakID:=`PeakID (cmd=annotatePeaks.pl consensus_peaks.mLb.clN.bed genome.fa -gid -gtf genes.gtf -cpu 6)`][,-"PeakID (cmd=annotatePeaks.pl consensus_peaks.mLb.clN.bed genome.fa -gid -gtf genes.gtf -cpu 6)"]
+peaks_anno[,closest_gene:=`Gene Name`]
+
 peaks_anno
 
 summary(peaks_anno$`Distance to TSS`)
@@ -98,14 +100,18 @@ ggplot(peaks_anno)+geom_bar(aes(x=anno_broad,fill=anno_broad))
 peaks_bool<-fread("~/RUN/Run_669_ATAC/Output/Bulk/bwa/mergedLibrary/macs/broadPeak/consensus/consensus_peaks.mLb.clN.boolean.txt")
 
 
-peaks_bool[(CONTROL_R1.mLb.clN.bool&CONTROL_R2.mLb.clN.bool&CONTROL_R3.mLb.clN.bool&CONTROL_R4.mLb.clN.bool)&(!TREATMENT_R1.mLb.clN.bool&!TREATMENT_R2.mLb.clN.bool&!TREATMENT_R3.mLb.clN.bool&!TREATMENT_R4.mLb.clN.bool)]
+peaks_bool[,n.time.in.control:=sum(c(CONTROL_R1.mLb.clN.bool,CONTROL_R2.mLb.clN.bool,CONTROL_R3.mLb.clN.bool,CONTROL_R4.mLb.clN.bool)),by="interval_id"]
+peaks_bool[,n.time.in.pamh:=sum(TREATMENT_R1.mLb.clN.bool,TREATMENT_R2.mLb.clN.bool,TREATMENT_R3.mLb.clN.bool,TREATMENT_R4.mLb.clN.bool),by="interval_id"]
 
-exclu_control<-peaks_bool[(CONTROL_R1.mLb.clN.bool&CONTROL_R2.mLb.clN.bool&CONTROL_R3.mLb.clN.bool&CONTROL_R4.mLb.clN.bool)&(!TREATMENT_R1.mLb.clN.bool&!TREATMENT_R2.mLb.clN.bool&!TREATMENT_R3.mLb.clN.bool&!TREATMENT_R4.mLb.clN.bool)]$interval_id
+
+
+
+exclu_control<-peaks_bool[n.time.in.control==4&n.time.in.pamh==0]$interval_id
 length(exclu_control) #518
 
 
 
-exclu_pamh<-peaks_bool[(!CONTROL_R1.mLb.clN.bool&!CONTROL_R2.mLb.clN.bool&!CONTROL_R3.mLb.clN.bool&!CONTROL_R4.mLb.clN.bool)&(TREATMENT_R1.mLb.clN.bool&TREATMENT_R2.mLb.clN.bool&TREATMENT_R3.mLb.clN.bool&TREATMENT_R4.mLb.clN.bool)]$interval_id
+exclu_pamh<-peaks_bool[n.time.in.control==0&n.time.in.pamh==4]$interval_id
 length(exclu_pamh) #8
 
 #without PAMH outlier (TREATMENT_R4 because low  number of peaks detected)
@@ -113,9 +119,10 @@ exclu_pamh2<-peaks_bool[(!CONTROL_R1.mLb.clN.bool&!CONTROL_R2.mLb.clN.bool&!CONT
 
 length(exclu_pamh2) #196
 
-peaks_exclu<-peaks_bool[interval_id%in%c(exclu_control,exclu_pamh,exclu_pamh2)]
+peaks_exclu<-peaks_bool[interval_id%in%c(exclu_control,exclu_pamh2)]
 peaks_exclu[,condition:=ifelse(CONTROL_R1.mLb.clN.bool,"PBS","PAMH")]
 peaks_exclu[,All_PAMH_samples:=condition=="PAMH"&TREATMENT_R4.mLb.clN.bool]
+
 
 ggplot(peaks_exclu[(All_PAMH_samples)|condition=="PBS"])+geom_bar(aes(x=condition,fill=condition))
 
@@ -130,10 +137,18 @@ ggplot(peaks_exclu)+geom_bar(aes(x=condition,fill=condition,col=paste(condition,
 peaks_anno[,interval_id:=PeakID]
 peaks_exclu_anno<-merge(peaks_exclu,peaks_anno)
 
-peaks_exclu_anno[,closest_gene:=`Gene Name`]
 
-ggplot(peaks_exclu_anno)+geom_bar(aes(x=anno_broad,fill=anno_broad))
+fwrite(peaks_exclu_anno,fp(out,"peaks_exclu_anno.csv.gz"))
+#[to share]
+out_to_share<-fp(out,'to_share')
+dir.create(out_to_share)
+#peak exclu PBS
+fwrite(peaks_exclu_anno[condition=="PBS"][order(Chr,Start)][,.(PeakID,chr,start,end,closest_gene,`Distance to TSS`,anno_broad,Annotation,n.time.in.control,n.time.in.pamh)],
+       fp(out_to_share,'peaks_exclu_control.csv'))
 
+#peak exclu PAMH
+fwrite(peaks_exclu_anno[condition=="PAMH"][order(Chr,Start)][,.(PeakID,chr,start,end,closest_gene,`Distance to TSS`,anno_broad,Annotation,n.time.in.control,n.time.in.pamh)],
+       fp(out,'peaks_exclu_pamh.csv'))
 
 
 #is it significant ? [todo: permutation test]
@@ -143,7 +158,11 @@ peaks_bool[(CONTROL_R1.mLb.clN.bool&TREATMENT_R2.mLb.clN.bool&CONTROL_R3.mLb.clN
 peaks_bool[(CONTROL_R1.mLb.clN.bool&TREATMENT_R2.mLb.clN.bool&TREATMENT_R1.mLb.clN.bool&CONTROL_R4.mLb.clN.bool)&(!CONTROL_R2.mLb.clN.bool&!CONTROL_R3.mLb.clN.bool&!TREATMENT_R3.mLb.clN.bool&!TREATMENT_R4.mLb.clN.bool)]$interval_id
 
 
+
 #characterization of these peaks
+# genomics region
+ggplot(peaks_exclu_anno)+geom_bar(aes(x=anno_broad,fill=anno_broad))
+
 #close to gene TSS ?
 summary(abs(peaks_anno$`Distance to TSS`))
   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -153,30 +172,32 @@ summary(abs(peaks_anno[PeakID%in%exclu_control]$`Distance to TSS`))
    # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
    #   15   15229   37524   68331   86847  705882 
 
-peaks_anno[,exclusivity:=ifelse(PeakID%in%exclu_control,"exclu control",ifelse(PeakID%in%exclu_pamh,"exclu PAMH","found in both group"))]
+peaks_anno[,exclusivity:=ifelse(PeakID%in%exclu_control,"exclu control",ifelse(PeakID%in%exclu_pamh2,"exclu PAMH","found in both group"))]
 
 ggplot(peaks_anno)+
   geom_density(aes(x=`Distance to TSS`,fill=exclusivity,col=exclusivity),alpha=0.3)+
   coord_cartesian(xlim = c(-5e5 ,5e5))
 
-ggplot(peaks_anno)+
-  geom_density(aes(x=abs(`Distance to TSS`),fill=exclusivity),alpha=0.5)+
-  scale_x_log10()
 
 ggplot(peaks_anno)+
-  geom_boxplot(aes(y=abs(`Distance to TSS`),x=exclusivity,fill=exclusivity))+coord_cartesian(ylim = c(0,250000))
-
-genes_ctrl<-peaks_anno[PeakID%in%exclu_control]$`Gene Name`
-length(genes_ctrl) #518
-
+  geom_bar(aes(x=anno_broad,fill=anno_broad))+
+  facet_wrap("exclusivity",scales = "free_y")+
+  scale_x_discrete(guide = guide_axis(angle = 60))
 
 
-genes_pamh<-peaks_anno[PeakID%in%exclu_pamh]$`Gene Name`
-genes_pamh #"Dtna"          "1700019C18Rik" "F2rl3"         "Daam2"         "Clca3a1"       "Relt"          "Arhgef28"      "Map3k7"  
+genes_exclu_ctrl<-peaks_anno[PeakID%in%exclu_control]$`Gene Name`
+length(genes_exclu_ctrl) #518
 
 
-genes_pamh2<-peaks_anno[PeakID%in%exclu_pamh2]$`Gene Name`
-genes_pamh2 #193
+
+genes_exclu_pamh<-peaks_anno[PeakID%in%exclu_pamh]$`Gene Name`
+genes_exclu_pamh #"Dtna"          "1700019C18Rik" "F2rl3"         "Daam2"         "Clca3a1"       "Relt"          "Arhgef28"      "Map3k7"  
+
+
+genes_exclu_pamh2<-peaks_anno[PeakID%in%exclu_pamh2]$`Gene Name`
+genes_exclu_pamh2 #193
+
+
 
 #2) count differences : Is there difference of accessibility between condtion in each peak ? 
 #input: the peaks matrix (input of DESeq2)
@@ -202,43 +223,67 @@ res_da<-fread("~/RUN/Run_669_ATAC/Output/Bulk/bwa/mergedLibrary/macs/broadPeak/c
 res_da<-res_da[,PeakID:=Geneid][,-"Geneid"]
 res_da[padj<0.1] #0
 
-res_da_anno<-merge(res_da,)
 
-res_da[pvalue<10^-3&abs(log2FoldChange)>0.25] #109
+res_da_anno<-merge(res_da,peaks_anno[,-c('Chr','Start','End')],by="PeakID")
+
+res_da_anno[pvalue<10^-3&abs(log2FoldChange)>0.25] #109
 
 
-peak_up_ctrl<-res_da[pvalue<10^-3&log2FoldChange>0.25]$PeakID
+
+ggplot(res_da_anno,aes(x=log2FoldChange,y=-log10(pvalue)))+
+  geom_point(aes(col=-log10(pvalue)))
+
+res_da_anno[,sens:=ifelse(log2FoldChange>0,"up in PBS","up in PAMH")]
+
+res_da_anno[,top10:=rank(pvalue)<=10,by=sens]
+top10s<-res_da_anno[(top10)]$PeakID
+top10s
+ggplot(res_da_anno,aes(x=log2FoldChange,y=-log10(pvalue)))+
+  geom_point(aes(col=-log10(pvalue)),size=0.2)+
+  geom_text_repel(aes(label=ifelse(PeakID%in%top10s,closest_gene,"")),
+                   max.overlaps=10000)
+
+
+peaks_da_anno<-res_da_anno[pvalue<10^-3&abs(log2FoldChange)>0.25] #109
+
+peak_up_ctrl<-peaks_da_anno[sens=="up in PBS"]$PeakID
 length(peak_up_ctrl) #68
 
-peak_up_pamh<-res_da[pvalue<10^-3&log2FoldChange<(-0.25)]$PeakID
+peak_up_pamh<-peaks_da_anno[sens=="up in PAMH"]$PeakID
 length(peak_up_pamh) #41
 
-
-ggplot(res_da)+geom_point(aes(x=log2FoldChange,y=-log10(pvalue),col=-log10(pvalue)))
-
-genes_peak_up_ctrl<-peaks_anno[PeakID %in%peak_up_ctrl]$`Gene Name`
-genes_peak_up_pamh<-peaks_anno[PeakID %in%peak_up_pamh]$`Gene Name`
+genes_peak_up_ctrl<-peaks_da_anno[sens=="up in PBS"]$closest_gene
+genes_peak_up_pamh<-peaks_da_anno[sens=="up in PAMH"]$closest_gene
 
 
-genes_up_exclu_ctrl<-intersect(genes_peak_up_ctrl,genes_ctrl)
+genes_up_exclu_ctrl<-intersect(genes_peak_up_ctrl,genes_exclu_ctrl)
 genes_up_exclu_ctrl # 
 #  [1] "Ankrd55"       "4930480K15Rik" "Gm833"         "A730082K24Rik" "Sec61a1"       "Stac2"         "Fars2"         "A930012L18Rik" "Col23a1"       "G630093K05Rik"
 # [11] "Foxp1" 
 #11/68/517
-OR(set1 = genes_peak_up_ctrl,set2 = genes_ctrl,size_universe = length(unique(peaks_anno$`Gene Name`)))
+
+OR(set1 = genes_peak_up_ctrl,set2 = genes_exclu_ctrl,size_universe = length(unique(peaks_anno$`Gene Name`)))
 #p = 5.048136e-07
 
-# res<-OR3(querys = list(gene_up_ctrl=genes_peak_up_ctrl),terms_list = list(genes_exclu_ctrl=genes_ctrl),background = unique(peaks_anno$`Gene Name`))
+# res<-OR3(querys = list(gene_up_ctrl=genes_peak_up_ctrl),terms_list = list(genes_exclu_ctrl=genes_exclu_ctrl),background = unique(peaks_anno$`Gene Name`))
 # 
 # res
 
 
-intersect(genes_peak_up_pamh,genes_pamh) #0
+intersect(genes_peak_up_pamh,genes_exclu_pamh) #0
 
-intersect(genes_peak_up_pamh,genes_pamh2) #6/41
+intersect(genes_peak_up_pamh,genes_exclu_pamh2) #6/41
 
+fwrite(res_da_anno,fp(out,"res_da_deseq2_all_peaks_anno.csv.gz"))
 
+#[to share]
+#peak up PBS
+fwrite(peaks_da_anno[sens=="up in PBS"][order(Chr,Start)][,.(PeakID,Chr,Start,End,log2FoldChange,pvalue,padj,closest_gene,`Distance to TSS`,anno_broad,Annotation)],
+       fp(out_to_share,'peaks_exclu_control.csv'))
 
+#peak up PAMH
+fwrite(peaks_da_anno[sens=="up in PAMH"][order(Chr,Start)][,.(PeakID,Chr,Start,End,log2FoldChange,pvalue,padj,closest_gene,`Distance to TSS`,anno_broad,Annotation)],
+       fp(out_to_share,'peaks_exclu_pamh.csv'))
 
 
 ##Can it be integrated with the bulk RNA-seq from same brain regions and condition ?####
@@ -254,10 +299,10 @@ genes_up_pamh #"Kitl"    "Ramp3"   "Hacd2"   "C4b"     "Slc17a7" "Nsmf"    "Shox
 genes_up_ctrl<-res_de_mbh[fdr<0.05&log2FoldChange<(-0.25)]$external_gene_name
 genes_up_ctrl
 # # "Erdr1"   "Bnip5"   "Gm49749"
-intersect(genes_up_pamh,genes_pamh)
-intersect(genes_up_pamh,genes_pamh2)
+intersect(genes_up_pamh,genes_exclu_pamh)
+intersect(genes_up_pamh,genes_exclu_pamh2)
 
-intersect(genes_up_ctrl,genes_ctrl) #all 0 overlap
+intersect(genes_up_ctrl,genes_exclu_ctrl) #all 0 overlap
 
 #p 0.05
 genes_up_pamh2<-res_de_mbh[pvalue<0.05&log2FoldChange>0.25]$external_gene_name
@@ -265,14 +310,14 @@ genes_up_pamh2 #356
 
 genes_up_ctrl2<-res_de_mbh[pvalue<0.05&log2FoldChange<(-0.25)]$external_gene_name
 genes_up_ctrl2#300
-intersect(genes_up_pamh2,genes_pamh)
-intersect(genes_up_pamh2,genes_pamh2)
+intersect(genes_up_pamh2,genes_exclu_pamh)
+intersect(genes_up_pamh2,genes_exclu_pamh2)
 
-intersect(genes_up_ctrl2,genes_ctrl) #ns overlap
+intersect(genes_up_ctrl2,genes_exclu_ctrl) #ns overlap
 
 #overlap with genes differential accessibility and DEGs
 library(fgsea)
-genes_exclu<-union(genes_ctrl,genes_pamh2)
+genes_exclu<-union(genes_exclu_ctrl,genes_exclu_pamh2)
 degs<-union(genes_up_ctrl2,genes_up_pamh2)
 
 intersect(genes_exclu,degs)
@@ -289,9 +334,9 @@ names(genes_stats)<-res_de_mbh[order(stat)]$external_gene_name
 genes_stats<-genes_stats[!duplicated(names(genes_stats))]
 
 
-peaksgenes_list<-list(peak_exclu_ctrl=genes_ctrl,
-                      peak_exclu_pamh=genes_pamh,
-                    peak_exclu_pamh2=genes_pamh2,
+peaksgenes_list<-list(peak_exclu_ctrl=genes_exclu_ctrl,
+                      peak_exclu_pamh=genes_exclu_pamh,
+                    peak_exclu_pamh2=genes_exclu_pamh2,
                       peak_up_ctrl=genes_peak_up_ctrl,
                       peak_up_pamh=genes_peak_up_pamh)
 
@@ -309,61 +354,7 @@ genes_stats<-genes_stats[!duplicated(names(genes_stats))]
 res1_mdh<-fgsea(pathways=peaksgenes_list,stats=genes_stats)
 
 res1_mdh  #ns
-
-#others gsea stats ?
-{
-  #stat_gsea = sign(log2FC) * rank(-log10(pvalue))
-res_de_mbh[,stat_gsea:=sign(log2FoldChange)*rank(-log10(pvalue))] #stat_gsea pos= upreg in pamh
-res_de_mbh[order(stat_gsea)]
-
-genes_stats<-res_de_mbh[order(stat_gsea)]$stat_gsea
-names(genes_stats)<-res_de_mbh[order(stat_gsea)]$external_gene_name
-genes_stats<-genes_stats[!duplicated(names(genes_stats))]
-
-res2_mdh<-fgsea(pathways=peaksgenes_list,stats=genes_stats)
-res2_mdh
-
-#             pathway       pval      padj    log2err         ES       NES size
-# 1:  peak_exclu_ctrl 0.19816514 0.3302752 0.13145761  0.1720516  1.091798  414
-# 2:  peak_exclu_pamh 0.28884462 0.3610558 0.11101149  0.4751152  1.159910    7
-# 3: peak_exclu_pamh2 0.05736138 0.2868069 0.26166352  0.2362922  1.296284  141
-# 4:     peak_up_ctrl 0.38403042 0.3840304 0.09082414  0.2392918  1.048729   49
-# 5:     peak_up_pamh 0.16806723 0.3302752 0.15524197 -0.3086734 -1.232257   31
-#                                       leadingEdge
-# 1:    Sash1,Klf12,Edaradd,Panx2,Nrip1,Rtn4rl1,...
-# 2:                            Daam2,Arhgef28,Relt
-# 3:         Akr1e1,Fam181b,Gbx2,Vim,Utp6,Ube2h,...
-# 4: Fgfr2,Abhd12b,Anapc13,Afap1l2,Ntrk2,Cox6a1,...
-# 5:         Panx1,Hdx,Kit,Bdnf,Tmem114,Rundc3b,...
-
-
-
-#stat_gsea : simply rank of the gene from least to most DE (p_value)
-res_de_mbh[,stat_gsea:=rank(-log10(pvalue))] #stat_gsea pos= upreg in CTRL
-res_de_mbh[order(stat_gsea)]
-
-genes_stats<-res_de_mbh[order(stat_gsea)]$stat_gsea
-names(genes_stats)<-res_de_mbh[order(stat_gsea)]$external_gene_name
-genes_stats<-genes_stats[!duplicated(names(genes_stats))]
-
-res3_mdh<-fgsea(pathways=peaksgenes_list,stats=genes_stats,scoreType="pos")
-res3_mdh
-#             pathway       pval      padj    log2err        ES       NES size
-# 1:  peak_exclu_ctrl 0.28471528 0.3558941 0.07235709 0.2739684 1.0429554  414
-# 2:  peak_exclu_pamh 0.56643357 0.5664336 0.03992186 0.3824541 0.9500288    7
-# 3: peak_exclu_pamh2 0.03996004 0.0999001 0.22496609 0.3347430 1.2141016  141
-# 4:     peak_up_ctrl 0.03696304 0.0999001 0.23439265 0.4010134 1.3343589   49
-# 5:     peak_up_pamh 0.12287712 0.2047952 0.12210792 0.3885401 1.2370675   31
-#                                         leadingEdge
-# 1:      Tmem163,Sash1,Klf12,Edaradd,Tia1,Fndc3b,...
-# 2:                       Daam2,Arhgef28,Map3k7,Relt
-# 3:      Znrf2,Panx1,Akr1e1,Fam181b,Gbx2,Col27a1,...
-# 4: Fgfr2,Abhd12b,Anapc13,Afap1l2,Foxl2os,Hpcal1,...
-# 5:                 Panx1,Hdx,Bdh1,Aven,Kit,Bdnf,...
-
-
-
-}
+fwrite(res1_mdh,fp(out,"res_gsea_peaks_exclu_and_da_score_signlog2FC_mlog10pval_MBH.csv"))
 
 
 #POA####
@@ -378,10 +369,10 @@ genes_up_pamh #"Kitl"    "Ramp3"   "Hacd2"   "C4b"     "Slc17a7" "Nsmf"    "Shox
 genes_up_ctrl<-res_de_poa[fdr<0.05&log2FoldChange<(-0.25)]$external_gene_name
 genes_up_ctrl
 # # "Erdr1"   "Bnip5"   "Gm49749"
-intersect(genes_up_pamh,genes_pamh)
-intersect(genes_up_pamh,genes_pamh2) #Ttr
+intersect(genes_up_pamh,genes_exclu_pamh)
+intersect(genes_up_pamh,genes_exclu_pamh2) #Ttr
 
-intersect(genes_up_ctrl,genes_ctrl) 
+intersect(genes_up_ctrl,genes_exclu_ctrl) 
 
 #p 0.05
 genes_up_pamh2<-res_de_poa[pvalue<0.05&log2FoldChange>0.25]$external_gene_name
@@ -389,14 +380,14 @@ genes_up_pamh2 #187
 
 genes_up_ctrl2<-res_de_poa[pvalue<0.05&log2FoldChange<(-0.25)]$external_gene_name
 genes_up_ctrl2#379
-intersect(genes_up_pamh2,genes_pamh)
-intersect(genes_up_pamh2,genes_pamh2)# "Ttr"    "Dlx6"   "Panx1"  "Cxcl12"
+intersect(genes_up_pamh2,genes_exclu_pamh)
+intersect(genes_up_pamh2,genes_exclu_pamh2)# "Ttr"    "Dlx6"   "Panx1"  "Cxcl12"
 
-intersect(genes_up_ctrl2,genes_ctrl)  #"Npas3" "Prrc1" "Mdga2" "Snx29"
+intersect(genes_up_ctrl2,genes_exclu_ctrl)  #"Npas3" "Prrc1" "Mdga2" "Snx29"
 
 #test overlap with genes differential accessibility and DEGs
 
-genes_exclu<-union(genes_ctrl,genes_pamh2)
+genes_exclu<-union(genes_exclu_ctrl,genes_exclu_pamh2)
 degs<-union(genes_up_ctrl2,genes_up_pamh2)
 
 intersect(genes_exclu,degs)
@@ -414,12 +405,6 @@ genes_stats<-res_de_poa[order(stat)]$stat
 names(genes_stats)<-res_de_poa[order(stat)]$external_gene_name
 genes_stats<-genes_stats[!duplicated(names(genes_stats))]
 
-
-peaksgenes_list<-list(peak_exclu_ctrl=genes_ctrl,
-                      peak_exclu_pamh=genes_pamh,
-                    peak_exclu_pamh2=genes_pamh2,
-                      peak_up_ctrl=genes_peak_up_ctrl,
-                      peak_up_pamh=genes_peak_up_pamh)
 
 
 res_poa<-fgsea(pathways=peaksgenes_list,stats=genes_stats)
@@ -448,12 +433,12 @@ genes_stats<-genes_stats[!duplicated(names(genes_stats))]
 res1_poa<-fgsea(pathways=peaksgenes_list,stats=genes_stats)
 
 res1_poa
-#             pathway        pval       padj    log2err         ES       NES size
-# 1:  peak_exclu_ctrl 0.010626677 0.02656669 0.38073040  0.2640787  1.260787  409
-# 2:  peak_exclu_pamh 0.402097902 0.40209790 0.08359906 -0.5203262 -1.058499    7
-# 3: peak_exclu_pamh2 0.008070195 0.02656669 0.38073040  0.3361760  1.422630  143
-# 4:     peak_up_ctrl 0.050647325 0.08441221 0.32177592  0.3928663  1.379267   47
-# 5:     peak_up_pamh 0.205128205 0.25641026 0.15524197  0.3734796  1.185355   31
+#            pathway        pval       padj    log2err         ES       NES size
+# 1:  peak_exclu_ctrl 0.012243932 0.03060983 0.38073040  0.2640787  1.239418  409
+# 2:  peak_exclu_pamh 0.411334552 0.41133455 0.08479851 -0.5203262 -1.076570    7
+# 3: peak_exclu_pamh2 0.006920765 0.03060983 0.40701792  0.3361760  1.408327  143
+# 4:     peak_up_ctrl 0.043250652 0.07208442 0.32177592  0.3928663  1.371001   47
+# 5:     peak_up_pamh 0.176904177 0.22113022 0.16440576  0.3734796  1.206939   31
 #                                             leadingEdge
 # 1:         Bcl6,Tbc1d2b,Gabra5,Mtss1,Tshz1,Arhgef16,...
 # 2:                                 Map3k7,Relt,Arhgef28
@@ -461,46 +446,28 @@ res1_poa
 # 4: Fgfr2,Ppp1r15b,Cmklr1,G630093K05Rik,Hpcal1,Sstr2,...
 # 5:                Panx1,Cxcl12,Dio2,Xlr,Lrrc4c,Cnr1,...
 
+fwrite(res1_poa,fp(out_to_share,"res_gsea_peaks_exclu_and_da_score_signlog2FC_mlog10pval_POA.csv"))
+
+#leadingEdge
+genes_upreg_and_peaks_exclu<-union(res1_poa$leadingEdge[1][[1]],res1_poa$leadingEdge[3][[1]])
+length(genes_upreg_and_peaks_exclu)#1239
+peaks_exclu_anno[,leading_edge_in_PAMH_POA:=closest_gene%in%genes_upreg_and_peaks_exclu]
+
+peaks_exclu_anno[,gene:=closest_gene]
+res_de_poa[,gene:=external_gene_name]
 
 
-#stat_gsea = sign(log2FC) * rank(-log10(pvalue))
-res_de_poa[,stat_gsea:=sign(log2FoldChange)*rank(-log10(pvalue))] #stat_gsea pos= upreg in pamh
-res_de_poa[order(stat_gsea)]
+peaks_exclu_degs_poa<-merge(peaks_exclu_anno[(leading_edge_in_PAMH_POA)],res_de_poa,by="gene")
 
-genes_stats<-res_de_poa[order(stat_gsea)]$stat_gsea
-names(genes_stats)<-res_de_poa[order(stat_gsea)]$external_gene_name
-genes_stats<-genes_stats[!duplicated(names(genes_stats))]
+fwrite(peaks_exclu_degs_poa,fp(out,"res_peaks_exclu_and_degs_poa_merged.csv.gz"))
 
-res2_poa<-fgsea(pathways=peaksgenes_list,stats=genes_stats)
-res2_poa
-
-#             pathway        pval       padj    log2err         ES       NES size
-# 1:  peak_exclu_ctrl 0.007927863 0.03963931 0.38073040  0.1980668  1.306349  409
-# 2:  peak_exclu_pamh 0.388785047 0.45517241 0.08916471 -0.4204460 -1.035575    7
-# 3: peak_exclu_pamh2 0.407216495 0.45517241 0.10552094  0.1792585  1.016844  143
-# 4:     peak_up_ctrl 0.055517747 0.13879437 0.32177592  0.3170527  1.437482   47
-# 5:     peak_up_pamh 0.455172414 0.45517241 0.09196861  0.2501938  1.009477   31
-#                                             leadingEdge
-# 1:         Bcl6,Tbc1d2b,Gabra5,Mtss1,Tshz1,Arhgef16,...
-# 2:                                 Map3k7,Relt,Arhgef28
-# 3:                    Ttr,Dlx6,Panx1,Cxcl12,Dio2,Qk,...
-# 4: Fgfr2,Ppp1r15b,Cmklr1,G630093K05Rik,Hpcal1,Sstr2,...
-# 5:                Panx1,Cxcl12,Dio2,Xlr,Lrrc4c,Cnr1,...
-
-#stat_gsea = rank(-log10(pvalue))
-res_de_poa[,stat_gsea:=rank(-log10(pvalue))] #stat_gsea pos= upreg in pamh
-res_de_poa[order(stat_gsea)]
-
-genes_stats<-res_de_poa[order(stat_gsea)]$stat_gsea
-names(genes_stats)<-res_de_poa[order(stat_gsea)]$external_gene_name
-genes_stats<-genes_stats[!duplicated(names(genes_stats))]
-
-res3_poa<-fgsea(pathways=peaksgenes_list,stats=genes_stats,scoreType="pos")
-res3_poa#ns
+#[to share]                  
+fwrite(peaks_exclu_degs_poa[condition=="PAMH"][order(-stat_gsea),.(chr,start,end,PeakID,n.time.in.control,n.time.in.pamh,anno_broad,Annotation,closest_gene,`Distance to TSS`,gene,pvalue,log2FoldChange,fdr,TPM_SOPK_F3,TPM_SOPK_F3)],
+       fp(out_to_share,"peaks_exclu_PAMH_leading_upreg_gsea_enrichment.csv"))                 
+fwrite(peaks_exclu_degs_poa[condition=="PBS"][order(-stat_gsea),.(chr,start,end,PeakID,n.time.in.control,n.time.in.pamh,anno_broad,Annotation,closest_gene,`Distance to TSS`,gene,pvalue,log2FoldChange,fdr,TPM_SOPK_F3,TPM_SOPK_F3)],
+       fp(out_to_share,"peaks_exclu_PBS_leading_upreg_gsea_enrichment.csv"))  
 
 
-
-#ccl : GSEA significant only on
 
 
 #[To do] less stringeant peak-gene linkage: a peak is linked to every genes at (TSS +-100k region ) 
